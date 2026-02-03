@@ -66,4 +66,4 @@ def delete_account():
 def me():
     user_id = int(get_jwt_identity())
     user = Usuario.query.get_or_404(user_id)
-    return {"id": user.id, "email": user.email, "nombre": user.nombre, "dni": user.dni}
+    return {"id": user.id, "email": user.email, "nombre": user.nombre, "dni": user.dni,"rol": user.rol.nombre}, 200

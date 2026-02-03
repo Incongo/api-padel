@@ -184,7 +184,33 @@ def cancelar_reserva(reserva_id):
     db.session.commit()
     return {}, 204
 
+# =========================================================
+# ===============   CONSULTA DATOS PISTAS / HORARIOS   ====
+# =========================================================
+@api_bp.get("/horarios")
+@user_required
+def list_horarios():
+    horarios = Horario.query.order_by(Horario.id.asc()).all()
+    return [
+        {"id": h.id, "franja": h.franja, "turno": h.turno}
+        for h in horarios
+    ]
 
+
+@api_bp.get("/pistas")
+@user_required
+def list_pistas():
+    pistas = Pista.query.order_by(Pista.id.asc()).all()
+    return [
+        {
+            "id": p.id,
+            "nombre": p.nombre,
+            "cubierta": p.cubierta,
+            "plazas": p.plazas,
+            "precio_base": str(p.precio_base),
+        }
+        for p in pistas
+    ]
 # =========================================================
 # ===============   DISPONIBILIDAD   =======================
 # =========================================================
@@ -226,3 +252,51 @@ def disponibilidad():
     ]
 
     return {"libres": libres}
+
+
+@api_bp.post("/disponibilidadfecha")
+@user_required
+def disponibilidadfecha(): 
+    """Para una fecha, la disponibilidad de todas las pistas"""
+    # force=True ayuda si el Content-Type no es exactamente application/json
+    # silent=True evita que explote si el body está vacío o mal formado
+    data = request.get_json(force=True, silent=True)
+    
+    # Si data es None o no es un diccionario (por ejemplo, es un string)
+    if not isinstance(data, dict):
+        return {"error": "El cuerpo de la petición debe ser un objeto JSON válido"}, 400
+
+    fecha = data.get("fecha") 
+
+ 
+   
+
+    if not fecha:
+        return {"error": "fecha es obligatoria"}, 400
+
+    pistas = Pista.query.all()
+    horarios = Horario.query.all()
+
+    disponibilidad = {}
+
+    for pista in pistas:
+        ocupadas = (
+            db.session.query(HorarioReserva.horario_id)
+            .join(Reserva)
+            .filter(
+                Reserva.pista_id == pista.id,
+                Reserva.fecha == fecha,
+            )
+            .all()
+        )
+        ocupadas = {h[0] for h in ocupadas}
+
+        libres = [
+            {"id": h.id, "franja": h.franja, "turno": h.turno}
+            for h in horarios
+            if h.id not in ocupadas
+        ]
+
+        disponibilidad[pista.nombre] = libres
+
+    return {"disponibilidad": disponibilidad}

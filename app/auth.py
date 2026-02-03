@@ -36,9 +36,19 @@ def login():
     if not user or not check_password_hash(user.password, password):
         return {"error": "credenciales inválidas"}, 401
 
-    # identity como string para JWT
-    token = create_access_token(identity=str(user.id))  # :contentReference[oaicite:7]{index=7}
-    return {"access_token": token}, 200
+    token = create_access_token(identity=str(user.id))
+
+    return {
+        "access_token": token,
+        "user": {
+            "id": user.id,
+            "nombre": user.nombre,
+            "email": user.email,
+            "rol": user.rol.nombre 
+        }
+    }, 200
+
+
 
 @auth_bp.post("/delete")
 
